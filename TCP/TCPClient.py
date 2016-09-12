@@ -1,6 +1,6 @@
 import socket
 
-#Generic template for testing services, fuzz, etc.
+#Generic template for testing services, fuzzing, etc.
 
 target_host = "www.google.com"
 target_port = "80"
