@@ -30,58 +30,6 @@ def usage():
     print "bhpnet.py -t 192.168.0.1 -p 5555 -l -e=\"cat /etc/passwd\""
     print "echo 'ABCDEFGH' | ./bhpnet.py -t 192.168.11.12 -p 135"
     sys.exit(0)
-    
-def main():
-    global listen
-    global port
-    global execute
-    global command
-    global upload_destination
-    global target
-    
-    #catch empty input
-    if not len(sys.argv[1:]):
-        usage()
-    
-    #read commands
-    try:
-        opts, args = getopt.getopt(sys.argv[1:], "hle:t:p:cu:", ["help", "listen", "execute", "target", "port", "command", "upload"])
-    except getopt.GetoptError as err:
-        print str(err)
-        usage()
-        
-    for o,a in opts:
-        if o in ("-h", "--help"):
-            usage()
-        elif o in ("-l", "--listen"):
-            listen = True
-        elif o in ("-e", "--execute"):
-            execute = a
-        elif o in ("-c", "--commandshell"):
-            command = True
-        elif o in ("-u", "--upload"):
-            upload_destination = a
-        elif o in ("-t", "--target"):
-            target = a
-        elif o in ("-p", "--port"):
-            port = int(a)
-        else:
-            assert False, "Unhandled Option"
-            
-        #check listen or send data from stdin
-        #mimics netcat
-        if not listen and len(target) and port > 0:
-            #read buffer from cmd line
-            #CTRL+D to bypass stdin read if no data
-            buff = sys.stfin.read()
-            
-            client_sender(buffer)
-            
-        if listen:
-            #wait for commands
-            server_loop()
-            
-main()
 
 def client_sender(buffer):
     
@@ -212,3 +160,57 @@ def client_handler(client_socket):
             
             #send back the response
             client_socket.send(respose)
+            
+def main():
+    global listen
+    global port
+    global execute
+    global command
+    global upload_destination
+    global target
+    
+    #catch empty input
+    if not len(sys.argv[1:]):
+        usage()
+    
+    #read commands
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "hle:t:p:cu:", ["help", "listen", "execute", "target", "port", "command", "upload"])
+    except getopt.GetoptError as err:
+        print str(err)
+        usage()
+        
+    for o,a in opts:
+        if o in ("-h", "--help"):
+            usage()
+        elif o in ("-l", "--listen"):
+            listen = True
+        elif o in ("-e", "--execute"):
+            execute = a
+        elif o in ("-c", "--commandshell"):
+            command = True
+        elif o in ("-u", "--upload"):
+            upload_destination = a
+        elif o in ("-t", "--target"):
+            target = a
+        elif o in ("-p", "--port"):
+            port = int(a)
+        else:
+            assert False, "Unhandled Option"
+            
+        #check listen or send data from stdin
+        #mimics netcat
+        if not listen and len(target) and port > 0:
+            #read buffer from cmd line
+            #CTRL+D to bypass stdin read if no data
+            buff = sys.stdin.read()
+            
+            client_sender(buffer)
+            
+        if listen:
+            #wait for commands
+            print ("server running...")
+            server_loop()
+            print ("server stopped")
+            
+main()
