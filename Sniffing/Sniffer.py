@@ -1,12 +1,34 @@
 import socket
 import os
-import struct
+import time
+import threading
+
+from netaddr import IPNetwork, IPAddress
 from ctypes import *
 
 # listen on
 host = "192.168.0.196"
 
-#ip header
+# subnet to target
+subnet = "192.168.0.0/24"
+
+# string to check responses for
+message = "response from original"
+
+
+# this sprays out the UDP datagram
+def udp_sender(subnet, message):
+    time.sleep(5)
+    sender = socket.socket(socket.AF_INET, socket.SOCK_DIAGRAM)
+
+    for ip in IPNetwork(subnet):
+        try:
+            sender.sendto(message, ("%s" % ip, 65212))
+        except:
+            pass
+
+
+# ip header
 class IP(Structure):
     _fields_ = [
         ("ihl", c_ubyte, 4),
@@ -36,6 +58,22 @@ class IP(Structure):
         except:
             self.protocol = str(self.protocol_num)
 
+
+class ICMP(Structure):
+    _fields_ = [
+        ("type", c_ubyte),
+        ("code", c_ubyte),
+        ("checksum", c_ushort),
+        ("unused", c_ushort),
+        ("next_hop_mtu", c_ushort)
+        ]
+
+    def __new__(self, socket_buffer):
+        return self.from_buffer_copy(socket_buffer)
+
+    def __init__(self, socket_buffer):
+        pass
+
 # create raw socket and bind it to the public interface
 if os.name == "nt":
     socket_protocol = socket.IPPROTO_IP
@@ -53,11 +91,15 @@ sniffer.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
 if os.name == "nt":
     sniffer.ioctl(socket.SIO_RCVALL, socket.RCVALL_ON)
 
+# start sending packets
+t = threading.Thread(target=udp_sender, args=(subnet, message))
+t.start()
+
 try:
 
     while True:
 
-        #read packet
+        # read packet
         raw_buffer = sniffer.recvfrom(65565)[0]
 
         # ip header = first 20 bytes
@@ -65,7 +107,28 @@ try:
 
         print("Protocol: %s %s -> %s" % (ip_header.protocol, ip_header.src_address, ip_header.dst_address))
 
-#CTRL+C
+        # capture ICMP
+        if ip_header.protocol == "ICMP":
+
+            # find start of packet
+            offset = ip_header.ihl * 4
+            buf = raw_buffer[offset:offset + sizeof(ICMP)]
+
+            icmp_header = ICMP(buf)
+
+            print ("ICMP -> Type: %d Code: %d" % (icmp_header.type, icmp_header.code))
+
+            # Check code 3: a host is up but no port available to talk to
+            if icmp_header.code == 3 and icmp_header.type == 3:
+
+                # check response lands in subnet
+                if IPAddress(ip_header.src_address) in IPNetwork(subnet):
+
+                    if raw_buffer[len(raw_buffer) - len(message):] == message:
+                        print
+                        "Host Up: %s" % ip_header.src_address
+
+# CTRL+C
 except KeyboardInterrupt:
 
     if os.name == "nt":
